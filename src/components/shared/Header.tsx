@@ -6,6 +6,8 @@ const NAV_LINKS = [
   { href: "/doctors", label: "Doctors" },
   { href: "/specialties", label: "Specialties" },
   { href: "/locations", label: "Locations" },
+  { href: "/hospitals", label: "Hospitals" },
+  { href: "/diagnostic-centers", label: "Diagnostic Centers" },
 ];
 
 export function Header() {

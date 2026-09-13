@@ -1,4 +1,5 @@
-// Generates 600 deterministic, clearly-fake doctors for pagination/search/
+// Generates 600 deterministic, clearly-fake doctors, 500 clearly-fake
+// hospitals, and 500 clearly-fake diagnostic centers for pagination/search/
 // performance testing. Never run against production - see CLAUDE.md's
 // Healthcare Data rules (never invent credentials, BMDC status, hospital
 // affiliations, or reviews). Every record here is synthetic test data,
@@ -18,6 +19,8 @@ const prisma = new PrismaClient({
 });
 
 const DOCTOR_COUNT = 600;
+const HOSPITAL_COUNT = 500;
+const DIAGNOSTIC_CENTER_COUNT = 500;
 
 const SPECIALTIES = [
   { slug: "cardiology", name: "Cardiology" },
@@ -43,19 +46,67 @@ const LOCATIONS = [
   { slug: "bashundhara", name: "Bashundhara" },
 ];
 
-const HOSPITALS = [
-  { slug: "square-hospital-test", name: "Square Hospital (Test Data)", locationSlug: "dhanmondi" },
-  { slug: "apollo-hospital-test", name: "Apollo Hospital (Test Data)", locationSlug: "bashundhara" },
-  { slug: "united-hospital-test", name: "United Hospital (Test Data)", locationSlug: "gulshan" },
-  { slug: "labaid-hospital-test", name: "Labaid Hospital (Test Data)", locationSlug: "mirpur" },
-  { slug: "popular-hospital-test", name: "Popular Hospital (Test Data)", locationSlug: "uttara" },
-  { slug: "ibn-sina-hospital-test", name: "Ibn Sina Hospital (Test Data)", locationSlug: "banani" },
+// Named after a fixed pool of real Dhaka hospital brands, suffixed with a
+// padded index and "(Test Data)" so each generated row is unambiguously
+// synthetic while still producing varied, readable names at HOSPITAL_COUNT
+// scale - see CLAUDE.md's Healthcare Data rules (never invent affiliations
+// as if they were real; every record here is clearly marked as test data).
+const HOSPITAL_BRANDS = [
+  "Square Hospital",
+  "Apollo Hospital",
+  "United Hospital",
+  "Labaid Hospital",
+  "Popular Hospital",
+  "Ibn Sina Hospital",
+  "Evercare Hospital",
+  "BIRDEM General Hospital",
+  "Bangladesh Specialized Hospital",
+  "Green Life Hospital",
+];
+
+const DIAGNOSTIC_TESTS = [
+  { slug: "x-ray", name: "X-Ray" },
+  { slug: "blood-test", name: "Blood Test" },
+  { slug: "ct-scan", name: "CT Scan" },
+  { slug: "mri", name: "MRI" },
+  { slug: "ultrasound", name: "Ultrasound (USG)" },
+  { slug: "ecg", name: "ECG" },
+  { slug: "pathology", name: "Pathology" },
+  { slug: "dental-x-ray", name: "Dental X-Ray" },
+];
+
+// Named after a fixed pool of real Dhaka diagnostic chain brands, suffixed
+// with a padded index and "(Test Data)" for the same reason as
+// HOSPITAL_BRANDS above - see that comment.
+const DIAGNOSTIC_CENTER_BRANDS = [
+  "Popular Diagnostic",
+  "Ibn Sina Diagnostic",
+  "Labaid Diagnostics",
+  "Apollo Diagnostics",
+  "Green Life Diagnostics",
+  "Ad-din Diagnostic",
+  "Bangladesh Diagnostic Centre",
+  "Prime Diagnostic",
 ];
 
 const DEGREES = ["MBBS (Test)", "MBBS, FCPS (Test)", "MBBS, MD (Test)", "MBBS, MS (Test)"];
 const DESIGNATIONS = ["Test Consultant", "Test Senior Consultant", "Test Registrar", "Test Assistant Professor"];
 
 async function main() {
+  // Re-runnable: clear this script's own previously-generated rows first, so
+  // changing DOCTOR_COUNT/HOSPITAL_COUNT and re-running never leaves stale
+  // doctors/hospitals (or duplicate affiliations) behind. Scoped to this
+  // script's deterministic id prefixes so seed.ts's fixture data is untouched.
+  await prisma.chamber.deleteMany({ where: { doctorId: { startsWith: "test-bulk-doctor-" } } });
+  await prisma.doctorHospital.deleteMany({ where: { doctorId: { startsWith: "test-bulk-doctor-" } } });
+  await prisma.doctorSpecialty.deleteMany({ where: { doctorId: { startsWith: "test-bulk-doctor-" } } });
+  await prisma.doctor.deleteMany({ where: { id: { startsWith: "test-bulk-doctor-" } } });
+  await prisma.hospital.deleteMany({ where: { id: { startsWith: "test-bulk-hospital-" } } });
+  await prisma.diagnosticCenterTest.deleteMany({
+    where: { diagnosticCenterId: { startsWith: "test-bulk-diagnostic-center-" } },
+  });
+  await prisma.diagnosticCenter.deleteMany({ where: { id: { startsWith: "test-bulk-diagnostic-center-" } } });
+
   const specialtyRecords = await Promise.all(
     SPECIALTIES.map((s) => prisma.specialty.upsert({ where: { slug: s.slug }, update: {}, create: s })),
   );
@@ -66,17 +117,54 @@ async function main() {
     ),
   );
 
-  const locationBySlug = new Map(locationRecords.map((l) => [l.slug, l]));
+  const hospitals: { id: string; slug: string; name: string; locationId: string }[] = [];
+  for (let i = 1; i <= HOSPITAL_COUNT; i++) {
+    const index = i - 1;
+    const padded = String(i).padStart(4, "0");
+    const brand = HOSPITAL_BRANDS[index % HOSPITAL_BRANDS.length];
+    const location = locationRecords[index % locationRecords.length];
 
-  const hospitalRecords = await Promise.all(
-    HOSPITALS.map((h) =>
-      prisma.hospital.upsert({
-        where: { slug: h.slug },
-        update: {},
-        create: { slug: h.slug, name: h.name, locationId: locationBySlug.get(h.locationSlug)!.id },
-      }),
-    ),
+    hospitals.push({
+      id: `test-bulk-hospital-${padded}`,
+      slug: `hospital-test-bulk-${padded}`,
+      name: `${brand} ${padded} (Test Data)`,
+      locationId: location.id,
+    });
+  }
+
+  await prisma.hospital.createMany({ data: hospitals, skipDuplicates: true });
+  const hospitalRecords = hospitals;
+
+  const diagnosticTestRecords = await Promise.all(
+    DIAGNOSTIC_TESTS.map((t) => prisma.diagnosticTest.upsert({ where: { slug: t.slug }, update: {}, create: t })),
   );
+
+  const diagnosticCenters: { id: string; slug: string; name: string; locationId: string }[] = [];
+  const diagnosticCenterTests: { diagnosticCenterId: string; diagnosticTestId: string }[] = [];
+  for (let i = 1; i <= DIAGNOSTIC_CENTER_COUNT; i++) {
+    const index = i - 1;
+    const padded = String(i).padStart(4, "0");
+    const id = `test-bulk-diagnostic-center-${padded}`;
+    const brand = DIAGNOSTIC_CENTER_BRANDS[index % DIAGNOSTIC_CENTER_BRANDS.length];
+    const location = locationRecords[index % locationRecords.length];
+    const primaryTest = diagnosticTestRecords[index % diagnosticTestRecords.length];
+    const secondaryTest = diagnosticTestRecords[(index + 3) % diagnosticTestRecords.length];
+
+    diagnosticCenters.push({
+      id,
+      slug: `diagnostic-center-test-bulk-${padded}`,
+      name: `${brand} ${padded} (Test Data)`,
+      locationId: location.id,
+    });
+
+    diagnosticCenterTests.push({ diagnosticCenterId: id, diagnosticTestId: primaryTest.id });
+    if (secondaryTest.id !== primaryTest.id) {
+      diagnosticCenterTests.push({ diagnosticCenterId: id, diagnosticTestId: secondaryTest.id });
+    }
+  }
+
+  await prisma.diagnosticCenter.createMany({ data: diagnosticCenters, skipDuplicates: true });
+  await prisma.diagnosticCenterTest.createMany({ data: diagnosticCenterTests, skipDuplicates: true });
 
   const doctors: {
     id: string;
@@ -149,7 +237,9 @@ async function main() {
   await prisma.doctorHospital.createMany({ data: doctorHospitals, skipDuplicates: true });
   await prisma.chamber.createMany({ data: chambers, skipDuplicates: true });
 
-  console.log(`Bulk seed complete: ${DOCTOR_COUNT} test doctors.`);
+  console.log(
+    `Bulk seed complete: ${DOCTOR_COUNT} test doctors, ${HOSPITAL_COUNT} test hospitals, ${DIAGNOSTIC_CENTER_COUNT} test diagnostic centers.`,
+  );
 }
 
 main()

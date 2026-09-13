@@ -14,6 +14,8 @@ afterAll(async () => {
 beforeEach(async () => {
   await prisma.chamber.deleteMany();
   await prisma.hospital.deleteMany();
+  await prisma.diagnosticCenterTest.deleteMany();
+  await prisma.diagnosticCenter.deleteMany();
   await prisma.location.deleteMany();
 });
 

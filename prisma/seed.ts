@@ -67,6 +67,31 @@ async function main() {
     },
   });
 
+  const xray = await prisma.diagnosticTest.upsert({
+    where: { slug: "x-ray" },
+    update: {},
+    create: { slug: "x-ray", name: "X-Ray", description: "Diagnostic imaging using radiation." },
+  });
+
+  const bloodTest = await prisma.diagnosticTest.upsert({
+    where: { slug: "blood-test" },
+    update: {},
+    create: { slug: "blood-test", name: "Blood Test", description: "Laboratory analysis of a blood sample." },
+  });
+
+  await prisma.diagnosticCenter.upsert({
+    where: { slug: "test-diagnostic-center" },
+    update: {},
+    create: {
+      slug: "test-diagnostic-center",
+      name: "Test Diagnostic Center",
+      locationId: dhanmondi.id,
+      tests: {
+        create: [{ diagnosticTestId: xray.id }, { diagnosticTestId: bloodTest.id }],
+      },
+    },
+  });
+
   await prisma.doctor.upsert({
     where: { slug: "dr-test-rahman" },
     update: {},

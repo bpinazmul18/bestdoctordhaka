@@ -40,8 +40,9 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  chambers  Chamber[]
-  hospitals Hospital[]
+  chambers          Chamber[]
+  hospitals         Hospital[]
+  diagnosticCenters DiagnosticCenter[]
 
   @@index([slug])
 }
@@ -59,6 +60,44 @@ model Hospital {
   chambers Chamber[]
 
   @@index([locationId])
+}
+
+model DiagnosticTest {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  centers DiagnosticCenterTest[]
+
+  @@index([slug])
+}
+
+model DiagnosticCenter {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  locationId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  location Location               @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  tests    DiagnosticCenterTest[]
+
+  @@index([locationId])
+}
+
+model DiagnosticCenterTest {
+  diagnosticCenterId String
+  diagnosticTestId   String
+
+  diagnosticCenter DiagnosticCenter @relation(fields: [diagnosticCenterId], references: [id], onDelete: Cascade)
+  diagnosticTest   DiagnosticTest   @relation(fields: [diagnosticTestId], references: [id], onDelete: Restrict)
+
+  @@id([diagnosticCenterId, diagnosticTestId])
+  @@index([diagnosticTestId])
 }
 
 model Doctor {
