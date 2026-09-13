@@ -1,10 +1,18 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth/dal";
 import { createDoctor } from "@/modules/doctor/doctor.service";
 import { createDoctorInputSchema } from "@/modules/doctor/doctor.validation";
 import { zodFlattenErrors, type ActionState } from "@/lib/forms/action-state";
+import {
+  ALLOWED_IMAGE_MIME_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  deleteObject,
+  extensionForImageMimeType,
+  uploadPublicObject,
+} from "@/lib/storage/r2";
 
 function toOptionalNumber(value: FormDataEntryValue | null): number | undefined {
   if (!value || typeof value !== "string" || value.trim() === "") return undefined;
@@ -29,13 +37,33 @@ export async function createDoctorAction(_prevState: ActionState, formData: Form
       ? Array.from(new Set([primarySpecialtyId, ...additionalSpecialtyIds]))
       : additionalSpecialtyIds;
 
+  const slug = formData.get("slug");
+
+  const profileImage = formData.get("profileImage");
+  let uploadedImageKey: string | undefined;
+  let profileImageUrl: string | undefined;
+
+  if (profileImage instanceof File && profileImage.size > 0) {
+    if (!ALLOWED_IMAGE_MIME_TYPES.has(profileImage.type)) {
+      return { errors: { profileImage: ["Only JPEG, PNG, or WebP images are allowed."] } };
+    }
+    if (profileImage.size > MAX_IMAGE_SIZE_BYTES) {
+      return { errors: { profileImage: ["Image must be 5MB or smaller."] } };
+    }
+
+    const extension = extensionForImageMimeType(profileImage.type);
+    uploadedImageKey = `doctors/${typeof slug === "string" && slug ? slug : randomUUID()}/${randomUUID()}.${extension}`;
+    const body = Buffer.from(await profileImage.arrayBuffer());
+    profileImageUrl = await uploadPublicObject({ key: uploadedImageKey, body, contentType: profileImage.type });
+  }
+
   const parsed = createDoctorInputSchema.safeParse({
-    slug: formData.get("slug"),
+    slug,
     fullName: formData.get("fullName"),
     degrees: toOptionalString(formData.get("degrees")),
     designation: toOptionalString(formData.get("designation")),
     shortBio: toOptionalString(formData.get("shortBio")),
-    profileImageUrl: toOptionalString(formData.get("profileImageUrl")),
+    profileImageUrl,
     yearsOfExperience: toOptionalNumber(formData.get("yearsOfExperience")),
     status: formData.get("status"),
     primarySpecialtyId,
@@ -44,12 +72,14 @@ export async function createDoctorAction(_prevState: ActionState, formData: Form
   });
 
   if (!parsed.success) {
+    if (uploadedImageKey) await deleteObject(uploadedImageKey);
     return { errors: zodFlattenErrors(parsed.error) };
   }
 
   try {
     await createDoctor(parsed.data);
   } catch {
+    if (uploadedImageKey) await deleteObject(uploadedImageKey);
     return { message: "Could not create doctor. The slug may already be in use, or a related record no longer exists." };
   }
 

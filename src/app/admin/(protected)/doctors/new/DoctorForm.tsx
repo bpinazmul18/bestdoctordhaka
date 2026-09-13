@@ -18,7 +18,7 @@ export function DoctorForm({
   const [state, action, pending] = useActionState(createDoctorAction, undefined);
 
   return (
-    <form action={action} className="flex max-w-md flex-col gap-4">
+    <form action={action} encType="multipart/form-data" className="flex max-w-md flex-col gap-4">
       {state?.message && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.message}</p>
       )}
@@ -72,17 +72,18 @@ export function DoctorForm({
       </div>
 
       <div>
-        <label htmlFor="profileImageUrl" className="mb-1 block text-sm font-medium text-ink">
-          Profile Image URL <span className="text-muted">(optional)</span>
+        <label htmlFor="profileImage" className="mb-1 block text-sm font-medium text-ink">
+          Profile Photo <span className="text-muted">(optional, JPEG/PNG/WebP, max 5MB)</span>
         </label>
         <input
-          id="profileImageUrl"
-          name="profileImageUrl"
-          type="url"
+          id="profileImage"
+          name="profileImage"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus-visible:outline-none"
         />
-        {state?.errors?.profileImageUrl && (
-          <p className="mt-1 text-sm text-red-700">{state.errors.profileImageUrl[0]}</p>
+        {state?.errors?.profileImage && (
+          <p className="mt-1 text-sm text-red-700">{state.errors.profileImage[0]}</p>
         )}
       </div>
 
