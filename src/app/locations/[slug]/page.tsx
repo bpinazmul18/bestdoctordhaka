@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Container } from "@/components/shared/Container";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { Pagination } from "@/components/shared/Pagination";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { DoctorCard } from "@/components/doctor/DoctorCard";
 import { getLocationBySlug } from "@/modules/location/location.service";
 import { listDoctors } from "@/modules/doctor/doctor.service";
@@ -41,7 +43,7 @@ export default async function LocationPage({ params, searchParams }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <Container className="py-8">
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
@@ -49,12 +51,18 @@ export default async function LocationPage({ params, searchParams }: Props) {
           { label: location.name },
         ]}
       />
-      <h1 className="mb-6 text-2xl font-semibold">
+      <h1 className="mb-2 text-2xl font-bold text-ink sm:text-3xl">
         Doctors in {location.name}, {location.city}
       </h1>
+      <p className="mb-6 text-sm text-muted">
+        {result.totalItems} {result.totalItems === 1 ? "doctor" : "doctors"} found
+      </p>
 
       {result.items.length === 0 ? (
-        <p className="text-zinc-500">No published doctors with a chamber in this area yet.</p>
+        <EmptyState
+          title="No published doctors with a chamber in this area yet"
+          description="Check back soon, or browse another area."
+        />
       ) : (
         <ul className="grid gap-4">
           {result.items.map((doctor) => (
@@ -64,6 +72,6 @@ export default async function LocationPage({ params, searchParams }: Props) {
       )}
 
       <Pagination page={result.page} totalPages={result.totalPages} buildHref={buildHref} />
-    </div>
+    </Container>
   );
 }

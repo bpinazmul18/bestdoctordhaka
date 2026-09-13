@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE_URL } from "@/lib/seo/site";
+import { ChevronRightIcon } from "./icons";
 
 export interface BreadcrumbItem {
   label: string;
@@ -19,17 +20,19 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   };
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-      <ol className="flex flex-wrap items-center gap-1">
+    <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
+      <ol className="flex flex-wrap items-center gap-1.5">
         {items.map((item, index) => (
-          <li key={item.label} className="flex items-center gap-1">
-            {index > 0 && <span aria-hidden="true">/</span>}
+          <li key={item.label} className="flex items-center gap-1.5">
+            {index > 0 && <ChevronRightIcon width={14} height={14} className="text-slate-400" />}
             {item.href ? (
-              <Link href={item.href} className="hover:underline">
+              <Link href={item.href} className="hover:text-brand-700 hover:underline">
                 {item.label}
               </Link>
             ) : (
-              <span aria-current="page">{item.label}</span>
+              <span aria-current="page" className="font-medium text-ink">
+                {item.label}
+              </span>
             )}
           </li>
         ))}

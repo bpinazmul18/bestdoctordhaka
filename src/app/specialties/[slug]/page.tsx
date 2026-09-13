@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Container } from "@/components/shared/Container";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { Pagination } from "@/components/shared/Pagination";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { DoctorCard } from "@/components/doctor/DoctorCard";
 import { getSpecialtyBySlug } from "@/modules/specialty/specialty.service";
 import { listDoctors } from "@/modules/doctor/doctor.service";
@@ -43,7 +45,7 @@ export default async function SpecialtyPage({ params, searchParams }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <Container className="py-8">
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },
@@ -51,11 +53,17 @@ export default async function SpecialtyPage({ params, searchParams }: Props) {
           { label: specialty.name },
         ]}
       />
-      <h1 className="mb-2 text-2xl font-semibold">{specialty.name} Doctors in Dhaka</h1>
-      {specialty.description && <p className="mb-6 text-zinc-500">{specialty.description}</p>}
+      <h1 className="mb-2 text-2xl font-bold text-ink sm:text-3xl">{specialty.name} Doctors in Dhaka</h1>
+      {specialty.description && <p className="mb-2 text-muted">{specialty.description}</p>}
+      <p className="mb-6 text-sm text-muted">
+        {result.totalItems} {result.totalItems === 1 ? "doctor" : "doctors"} found
+      </p>
 
       {result.items.length === 0 ? (
-        <p className="text-zinc-500">No published doctors for this specialty yet.</p>
+        <EmptyState
+          title="No published doctors for this specialty yet"
+          description="Check back soon, or browse another specialty."
+        />
       ) : (
         <ul className="grid gap-4">
           {result.items.map((doctor) => (
@@ -65,6 +73,6 @@ export default async function SpecialtyPage({ params, searchParams }: Props) {
       )}
 
       <Pagination page={result.page} totalPages={result.totalPages} buildHref={buildHref} />
-    </div>
+    </Container>
   );
 }
