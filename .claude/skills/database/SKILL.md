@@ -1,211 +1,200 @@
 # Database Skill — BestDoctorDhaka.com
 
 ## Purpose
+This skill defines database design, PostgreSQL, Prisma, migrations, seed data, query patterns, performance, security, and data-integrity rules.
 
-This skill defines database design, Prisma, PostgreSQL, migrations, seed data, query patterns, and data-integrity rules for BestDoctorDhaka.com.
+Project style: solo-developer modular monolith.
+Primary database: PostgreSQL.
+ORM: Prisma.
 
-The project is a solo-developer modular monolith.
+Do not introduce another primary database or ORM without explicit approval.
 
-Primary database:
-
-- PostgreSQL
-
-ORM:
-
-- Prisma
-
-Do not introduce another ORM or database unless explicitly approved.
-
----
-
-## Core Principles
-
-1. Design for correctness before optimization.
-2. Keep the schema simple and understandable.
+## Principles
+1. Correctness before optimization.
+2. Keep schema simple and understandable.
 3. Prefer normalized relational data.
-4. Avoid premature denormalization.
-5. Avoid microservice-style database separation.
-6. Keep business rules outside Prisma queries where practical.
-7. Never silently modify production data.
-8. Never use destructive database operations casually.
+4. Use explicit relationships.
+5. Use database constraints for integrity.
+6. Add indexes based on real query patterns.
+7. Avoid premature denormalization.
+8. Never silently modify production data.
 9. Every schema change must be migration-based.
-10. Database changes must be backward-aware when the application is already deployed.
+10. Keep database access server-side.
 
----
-
-## Schema Design
-
-When creating a new entity:
-
-1. Define the business purpose.
-2. Identify required and optional fields.
-3. Identify relationships.
-4. Identify unique constraints.
-5. Identify indexes.
-6. Identify deletion behavior.
-7. Identify audit requirements.
-8. Consider SEO implications where applicable.
-9. Consider verification/trust implications where applicable.
-
-Use explicit relationships.
-
-Prefer:
-
-- `createdAt`
-- `updatedAt`
-
-for persistent entities where appropriate.
-
-Use appropriate PostgreSQL data types.
-
-Do not store structured data as JSON when a relational model is clearly more appropriate.
-
-Use JSON only when:
-
-- the structure is genuinely flexible
-- relational querying is unnecessary
-- there is a clear reason to avoid additional tables
-
----
-
-## IDs
-
-Use a consistent ID strategy throughout the project.
-
-Do not introduce multiple ID strategies without a concrete reason.
-
-IDs must not expose sensitive information unnecessarily.
-
-Public URLs should generally use a stable SEO-friendly slug rather than exposing internal database IDs.
-
-Example:
-
-`/doctors/dr-ahmed-hassan`
-
-instead of:
-
-`/doctors/18291`
-
----
-
-## Slugs
-
-Public entities that require SEO-friendly URLs should have unique slugs.
-
-Examples:
-
+## Core Entities
+Expected entities include:
 - Doctor
 - Hospital
-- Diagnostic Center
+- DiagnosticCenter
 - Specialty
 - Location
+- Chamber
+- Review
+- Verification
+- User
+- Provider
+- Subscription
+- Payment
+- Appointment
 - Article
 
-Slug requirements:
+Do not implement all entities during Phase 0. Introduce them with their roadmap phase.
 
+## IDs
+Use one consistent internal ID strategy.
+Public entities should generally use stable unique slugs rather than internal IDs.
+
+Example:
+`/doctors/dr-ahmed-hassan`
+
+## Timestamps
+Persistent entities should generally have `createdAt` and `updatedAt` where appropriate.
+
+## Slugs
+Public slugs should be:
 - lowercase
 - URL-safe
 - human-readable
 - unique
-- stable after publication where possible
+- stable after publication
 
-Do not automatically change an existing public slug without considering SEO redirects.
-
----
+Do not silently change a published slug. If a change is required, use a redirect strategy.
 
 ## Relationships
-
-Use proper relational constraints.
-
-Examples:
-
-Doctor → Specialty
-Doctor → Hospital
-Doctor → Chamber
-Doctor → Location
-Hospital → Location
-Diagnostic Center → Location
-
+Use explicit foreign keys.
 Use join tables for many-to-many relationships.
 
-Do not duplicate relationship data across multiple tables without a strong reason.
+Examples:
+- Doctor → Specialty
+- Doctor → Hospital
+- Doctor → Chamber
+- Doctor → Location
+- Hospital → Location
+- DiagnosticCenter → Location
 
----
+Avoid duplicating relationship data without a strong reason.
 
 ## Constraints
-
-Use database-level constraints where appropriate.
-
-Examples:
-
-- unique email
-- unique slug
-- unique BMDC registration number
+Use database-level constraints for:
+- unique slugs
 - unique provider identifiers
-- required foreign keys
-- valid relationship constraints
+- unique emails where appropriate
+- foreign keys
+- required fields
+- relationship integrity
 
-Application validation is required in addition to database constraints.
-
-Do not rely only on application-level validation for uniqueness or integrity.
-
----
+Application validation is required in addition to constraints.
 
 ## Indexes
-
-Add indexes based on actual query patterns.
-
-Likely indexed fields include:
-
+Consider indexes for actual query patterns such as:
 - slug
 - status
-- city
-- area/location identifiers
-- specialty identifiers
+- specialtyId
+- locationId
 - verification status
 - createdAt
 - searchable provider identifiers
 
-For composite indexes, base the order on actual filtering/sorting patterns.
-
-Do not create indexes for every column.
-
-Every index has write/storage cost.
-
----
+Composite indexes must follow real filter/sort patterns.
+Do not index every column.
 
 ## Search
+Use PostgreSQL capabilities initially.
+Keep search behind a service boundary so a future search engine can be introduced if justified.
+Do not introduce OpenSearch/Elasticsearch without measurable requirements and approval.
 
-Initial search implementation should use PostgreSQL capabilities.
-
-Do not introduce Elasticsearch/OpenSearch for MVP without measurable requirements.
-
-Search implementation should be designed so that a future search-engine migration is possible if scale requires it.
-
----
+## Pagination
+Never load unbounded directory data.
+Use pagination for doctors, hospitals, diagnostics, reviews, articles, and admin tables.
+Offset pagination is acceptable initially; cursor pagination may be introduced when justified.
 
 ## Prisma
-
-Use Prisma as the database access layer.
-
-Keep Prisma schema organized and readable.
-
-Do not put arbitrary business logic inside Prisma schema definitions.
-
-Prefer service/repository functions for reusable database operations.
-
-Avoid scattering raw Prisma queries throughout UI components.
-
-Database access should normally occur through server-side code.
-
----
+Use Prisma server-side.
+Keep schema readable.
+Avoid scattering Prisma queries across UI components.
+Prefer services/repositories for reusable database operations.
 
 ## Migrations
-
-Every schema modification must use a Prisma migration.
+All schema changes use Prisma migrations.
 
 Development:
-
 ```bash
 npx prisma migrate dev
 ```
+
+Production:
+```bash
+npx prisma migrate deploy
+```
+
+Never use `prisma db push` as the production migration strategy.
+Never run `prisma migrate reset` against production.
+
+Treat these as high-risk:
+- dropping columns/tables
+- nullable → required changes
+- unique constraints
+- enum changes
+- data type changes
+
+Prefer staged migrations for deployed systems.
+
+## Transactions
+Use transactions when multiple writes must succeed or fail together, for example:
+- provider + chamber creation/update
+- subscription state transitions
+- appointment creation
+- verification transitions
+
+## Seed Data
+Seed data must be deterministic, minimal, repeatable, and clearly fake.
+
+Never seed fake:
+- BMDC registrations
+- verification records
+- medical credentials
+- patient reviews
+- patient experiences
+
+## Healthcare Integrity
+Never invent doctor qualifications, BMDC information, verification, hospital affiliations, diagnostic services, reviews, or medical claims.
+Use explicit states such as `pending`, `verified`, `rejected`, `expired`, `suspended` when appropriate.
+
+## Authentication Data
+Never store plaintext passwords.
+Never expose authentication secrets or privileged database fields to clients.
+
+## Environment Variables
+Use `.env.local` for local secrets and `.env.example` for placeholders.
+Never commit secrets.
+Never expose server-only secrets as public environment variables.
+
+## Testing
+Database integration tests must use a dedicated test database/environment.
+Never run automated tests against production.
+Test constraints, relationships, transactions, pagination, not-found cases, and failure paths.
+
+## Query Performance
+Before optimizing:
+1. Identify the slow query.
+2. Inspect query shape.
+3. Check rows returned.
+4. Check joins/includes.
+5. Check indexes.
+6. Measure.
+7. Optimize only when justified.
+
+Avoid N+1 queries.
+
+## Production Safety
+Before production schema/data changes:
+- verify environment
+- verify migration
+- understand affected data
+- confirm backup strategy
+- confirm application compatibility
+
+Never run destructive SQL casually.
+
+## Definition of Done
+A database task is complete when schema, relationships, constraints, indexes, migration, validation, relevant tests, lint, typecheck, and build are correct.
