@@ -6,22 +6,30 @@ import { SpecialtyIcon } from "@/components/shared/SpecialtyIcon";
 import { HeroIllustration } from "@/components/shared/HeroIllustration";
 import { DoctorCard } from "@/components/doctor/DoctorCard";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { SearchIcon, MapPinIcon, GridIcon } from "@/components/shared/icons";
+import { SearchIcon, MapPinIcon, GridIcon, BuildingIcon, FlaskIcon, ArrowRightIcon } from "@/components/shared/icons";
 import { listSpecialties } from "@/modules/specialty/specialty.service";
 import { listLocations } from "@/modules/location/location.service";
 import { listDoctors } from "@/modules/doctor/doctor.service";
+import { listHospitals } from "@/modules/hospital/hospital.service";
+import { listDiagnosticCenters } from "@/modules/diagnostic-center/diagnostic-center.service";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination/pagination";
 
 const HOMEPAGE_DOCTOR_COUNT = 4;
+const HOMEPAGE_LOCATION_COUNT = 8;
+const HOMEPAGE_HOSPITAL_COUNT = 4;
+const HOMEPAGE_DIAGNOSTIC_CENTER_COUNT = 4;
 
 export default async function Home() {
-  const [specialties, locations, doctors] = await Promise.all([
+  const [specialties, locations, doctors, hospitals, diagnosticCenters] = await Promise.all([
     listSpecialties(),
     listLocations(),
     listDoctors({ page: 1, pageSize: DEFAULT_PAGE_SIZE }),
+    listHospitals({ page: 1, pageSize: HOMEPAGE_HOSPITAL_COUNT }),
+    listDiagnosticCenters({ page: 1, pageSize: HOMEPAGE_DIAGNOSTIC_CENTER_COUNT }),
   ]);
 
   const featuredDoctors = doctors.items.slice(0, HOMEPAGE_DOCTOR_COUNT);
+  const featuredLocations = locations.slice(0, HOMEPAGE_LOCATION_COUNT);
 
   return (
     <div>
@@ -154,6 +162,87 @@ export default async function Home() {
           )}
         </Container>
       </div>
+
+      <Container className="py-12 sm:py-16">
+        <SectionHeading title="Browse by Location" seeAllHref="/locations" />
+        {featuredLocations.length === 0 ? (
+          <EmptyState title="No locations available yet" />
+        ) : (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {featuredLocations.map((location) => (
+              <li key={location.slug}>
+                <Link
+                  href={`/locations/${location.slug}`}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                >
+                  <MapPinIcon width={20} height={20} className="shrink-0 text-brand-600" />
+                  <span className="flex-1 truncate font-medium text-ink">{location.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Container>
+
+      <div className="border-t border-slate-200 bg-slate-50">
+        <Container className="py-12 sm:py-16">
+          <SectionHeading title="Hospitals in Dhaka" seeAllHref="/hospitals" seeAllLabel="View all hospitals" />
+          {hospitals.items.length === 0 ? (
+            <EmptyState title="No hospitals published yet" />
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {hospitals.items.map((hospital) => (
+                <li key={hospital.slug}>
+                  <Link
+                    href={`/hospitals/${hospital.slug}`}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                  >
+                    <BuildingIcon width={22} height={22} className="shrink-0 text-brand-600" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-ink">{hospital.name}</span>
+                      <span className="block truncate text-sm text-muted">
+                        {hospital.location.name}, {hospital.location.city}
+                      </span>
+                    </span>
+                    <ArrowRightIcon width={16} height={16} className="shrink-0 text-muted" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Container>
+      </div>
+
+      <Container className="py-12 sm:py-16">
+        <SectionHeading
+          title="Diagnostic Centers in Dhaka"
+          seeAllHref="/diagnostic-centers"
+          seeAllLabel="View all diagnostic centers"
+        />
+        {diagnosticCenters.items.length === 0 ? (
+          <EmptyState title="No diagnostic centers published yet" />
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {diagnosticCenters.items.map((center) => (
+              <li key={center.slug}>
+                <Link
+                  href={`/diagnostic-centers/${center.slug}`}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                >
+                  <FlaskIcon width={22} height={22} className="shrink-0 text-brand-600" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-ink">{center.name}</span>
+                    <span className="block truncate text-sm text-muted">
+                      {center.location.name}, {center.location.city}
+                    </span>
+                  </span>
+                  <ArrowRightIcon width={16} height={16} className="shrink-0 text-muted" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Container>
     </div>
   );
 }

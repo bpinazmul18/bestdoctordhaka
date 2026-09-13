@@ -181,6 +181,26 @@ export function EarIcon(props: IconProps) {
   );
 }
 
+export function BuildingIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="5" y="3" width="10" height="18" rx="1" />
+      <path d="M15 21h4V9l-4-2" />
+      <path d="M8 7h1M11 7h1M8 11h1M11 11h1M8 15h1M11 15h1" />
+    </svg>
+  );
+}
+
+export function FlaskIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 3h6" />
+      <path d="M10 3v6.5L4.8 18a2 2 0 0 0 1.7 3h11a2 2 0 0 0 1.7-3L14 9.5V3" />
+      <path d="M7 15h10" />
+    </svg>
+  );
+}
+
 export function GridIcon(props: IconProps) {
   return (
     <svg {...base(props)}>
