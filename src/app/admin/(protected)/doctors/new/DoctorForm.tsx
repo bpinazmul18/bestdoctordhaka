@@ -18,7 +18,7 @@ export function DoctorForm({
   const [state, action, pending] = useActionState(createDoctorAction, undefined);
 
   return (
-    <form action={action} encType="multipart/form-data" className="flex max-w-md flex-col gap-4">
+    <form action={action} className="flex max-w-md flex-col gap-4">
       {state?.message && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.message}</p>
       )}
