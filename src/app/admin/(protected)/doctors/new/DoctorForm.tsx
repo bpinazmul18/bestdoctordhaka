@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import { createDoctorAction } from "./actions";
 import { Button } from "@/components/shared/Button";
 import { cx } from "@/components/shared/cx";
 import type { SpecialtyOptionDTO } from "@/modules/specialty/specialty.types";
 import type { HospitalOptionDTO } from "@/modules/hospital/hospital.types";
+import type { LocationOptionDTO } from "@/modules/location/location.types";
 
 const STATUS_OPTIONS = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
 
@@ -61,15 +62,144 @@ function CheckboxGroup({
   );
 }
 
+function ChamberRow({
+  index,
+  locations,
+  hospitals,
+  onRemove,
+  removable,
+}: {
+  index: number;
+  locations: LocationOptionDTO[];
+  hospitals: HospitalOptionDTO[];
+  onRemove: () => void;
+  removable: boolean;
+}) {
+  const idPrefix = useId();
+
+  return (
+    <div className="rounded-lg border border-slate-200 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-semibold text-ink">Chamber {index + 1}</p>
+        {removable && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-sm font-medium text-red-700 hover:underline"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor={`${idPrefix}-name`} className="mb-1 block text-sm font-medium text-ink">
+              Chamber / Hospital Name <span className="text-muted">(optional)</span>
+            </label>
+            <input
+              id={`${idPrefix}-name`}
+              name="chamberName"
+              placeholder="e.g. Popular Diagnostic Center, Rangpur"
+              className={inputClasses}
+            />
+          </div>
+
+          <div>
+            <label htmlFor={`${idPrefix}-location`} className="mb-1 block text-sm font-medium text-ink">
+              Location
+            </label>
+            <select id={`${idPrefix}-location`} name="chamberLocationId" defaultValue="" className={cx(inputClasses, "bg-white")}>
+              <option value="">Select a location</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {hospitals.length > 0 && (
+          <div>
+            <label htmlFor={`${idPrefix}-hospital`} className="mb-1 block text-sm font-medium text-ink">
+              Hospital <span className="text-muted">(optional)</span>
+            </label>
+            <select id={`${idPrefix}-hospital`} name="chamberHospitalId" defaultValue="" className={cx(inputClasses, "bg-white")}>
+              <option value="">None</option>
+              {hospitals.map((hospital) => (
+                <option key={hospital.id} value={hospital.id}>
+                  {hospital.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label htmlFor={`${idPrefix}-address`} className="mb-1 block text-sm font-medium text-ink">
+            Address
+          </label>
+          <input id={`${idPrefix}-address`} name="chamberAddressLine" placeholder="e.g. 77/1, Jail Road, Rangpur" className={inputClasses} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor={`${idPrefix}-phone`} className="mb-1 block text-sm font-medium text-ink">
+              Phone <span className="text-muted">(optional)</span>
+            </label>
+            <input id={`${idPrefix}-phone`} name="chamberContactPhone" placeholder="+8809666787813" className={inputClasses} />
+          </div>
+
+          <div>
+            <label htmlFor={`${idPrefix}-whatsapp`} className="mb-1 block text-sm font-medium text-ink">
+              WhatsApp <span className="text-muted">(optional)</span>
+            </label>
+            <input id={`${idPrefix}-whatsapp`} name="chamberWhatsappNumber" placeholder="+8809666787813" className={inputClasses} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor={`${idPrefix}-hours`} className="mb-1 block text-sm font-medium text-ink">
+              Visiting Hours <span className="text-muted">(optional)</span>
+            </label>
+            <input id={`${idPrefix}-hours`} name="chamberVisitingHours" placeholder="e.g. 5pm to 9pm" className={inputClasses} />
+          </div>
+
+          <div>
+            <label htmlFor={`${idPrefix}-closed`} className="mb-1 block text-sm font-medium text-ink">
+              Closed Day <span className="text-muted">(optional)</span>
+            </label>
+            <input id={`${idPrefix}-closed`} name="chamberClosedDay" placeholder="e.g. Friday" className={inputClasses} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DoctorForm({
   specialties,
   hospitals,
+  locations,
 }: {
   specialties: SpecialtyOptionDTO[];
   hospitals: HospitalOptionDTO[];
+  locations: LocationOptionDTO[];
 }) {
   const [state, action, pending] = useActionState(createDoctorAction, undefined);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [chamberKeys, setChamberKeys] = useState<string[]>(() => [crypto.randomUUID()]);
+
+  function addChamber() {
+    setChamberKeys((keys) => [...keys, crypto.randomUUID()]);
+  }
+
+  function removeChamber(key: string) {
+    setChamberKeys((keys) => keys.filter((k) => k !== key));
+  }
 
   function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -214,6 +344,45 @@ export function DoctorForm({
           <CheckboxGroup name="hospitalIds" items={hospitals.map((h) => ({ id: h.id, label: h.name }))} />
         </Section>
       )}
+
+      <Section
+        title="Chambers (Clinic / Visiting Information)"
+        description="Optional. Add one or more chambers where this doctor sees patients."
+      >
+        {chamberKeys.map((key, index) => (
+          <ChamberRow
+            key={key}
+            index={index}
+            locations={locations}
+            hospitals={hospitals}
+            onRemove={() => removeChamber(key)}
+            removable={chamberKeys.length > 1}
+          />
+        ))}
+
+        <Button type="button" variant="outline" size="sm" onClick={addChamber} className="self-start">
+          + Add Another Chamber
+        </Button>
+      </Section>
+
+      <Section
+        title="Conditions Treated"
+        description="Optional. One condition per line — only what this doctor is actually known to treat."
+      >
+        <div>
+          <label htmlFor="conditionsTreated" className="mb-1 block text-sm font-medium text-ink">
+            Conditions
+          </label>
+          <textarea
+            id="conditionsTreated"
+            name="conditionsTreated"
+            rows={5}
+            placeholder={"Stroke, Paralysis & Post-stroke Rehabilitation\nMigraine & Chronic Headache\nEpilepsy & Seizure Disorders"}
+            className={inputClasses}
+          />
+          <FieldError message={state?.errors?.conditionsTreated?.[0]} />
+        </div>
+      </Section>
 
       <Section title="URL Slug" description="Used in the doctor's public profile URL.">
         <div>

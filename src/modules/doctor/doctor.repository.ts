@@ -86,6 +86,7 @@ export async function createDoctorRecord(input: CreateDoctorInput): Promise<Doct
       shortBio: input.shortBio,
       profileImageUrl: input.profileImageUrl,
       yearsOfExperience: input.yearsOfExperience,
+      conditionsTreated: input.conditionsTreated ?? [],
       status: input.status,
       primarySpecialty: { connect: { id: input.primarySpecialtyId } },
       specialties: {

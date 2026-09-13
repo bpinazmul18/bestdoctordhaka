@@ -86,6 +86,23 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
+export function CheckIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+export function GraduationCapIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+      <path d="M6 12.5V17c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5" />
+    </svg>
+  );
+}
+
 export function StethoscopeIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

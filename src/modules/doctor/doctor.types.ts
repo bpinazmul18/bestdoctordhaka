@@ -37,6 +37,7 @@ export interface DoctorProfileDTO {
   shortBio: string | null;
   profileImageUrl: string | null;
   yearsOfExperience: number | null;
+  conditionsTreated: string[];
   primarySpecialty: SpecialtyRefDTO;
   specialties: SpecialtyRefDTO[];
   hospitalNames: string[];

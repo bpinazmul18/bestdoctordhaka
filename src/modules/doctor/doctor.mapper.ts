@@ -34,6 +34,7 @@ export function toDoctorProfileDTO(doctor: DoctorProfileRecord): DoctorProfileDT
     shortBio: doctor.shortBio,
     profileImageUrl: doctor.profileImageUrl,
     yearsOfExperience: doctor.yearsOfExperience,
+    conditionsTreated: doctor.conditionsTreated,
     primarySpecialty: toSpecialtyRef(doctor.primarySpecialty),
     specialties: doctor.specialties.map((entry) => toSpecialtyRef(entry.specialty)),
     hospitalNames: doctor.hospitals.map((entry) => entry.hospital.name),

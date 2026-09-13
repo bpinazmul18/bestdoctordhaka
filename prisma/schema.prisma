@@ -126,6 +126,7 @@ model Doctor {
   shortBio           String?
   profileImageUrl    String?
   yearsOfExperience  Int?
+  conditionsTreated  String[]     @default([])
   primarySpecialtyId String
   status             DoctorStatus @default(DRAFT)
   createdAt          DateTime     @default(now())

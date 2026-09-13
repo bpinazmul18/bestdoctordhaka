@@ -4,7 +4,11 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth/dal";
 import { createDoctor } from "@/modules/doctor/doctor.service";
-import { createDoctorInputSchema } from "@/modules/doctor/doctor.validation";
+import {
+  createDoctorInputSchema,
+  parseChamberRowsFromFormData,
+  parseConditionsTreatedText,
+} from "@/modules/doctor/doctor.validation";
 import { zodFlattenErrors, type ActionState } from "@/lib/forms/action-state";
 import {
   ALLOWED_IMAGE_MIME_TYPES,
@@ -57,6 +61,14 @@ export async function createDoctorAction(_prevState: ActionState, formData: Form
     profileImageUrl = await uploadPublicObject({ key: uploadedImageKey, body, contentType: profileImage.type });
   }
 
+  const chamberRows = parseChamberRowsFromFormData(formData);
+  if (!chamberRows.ok) {
+    if (uploadedImageKey) await deleteObject(uploadedImageKey);
+    return { message: chamberRows.error };
+  }
+
+  const conditionsTreated = parseConditionsTreatedText(String(formData.get("conditionsTreated") ?? ""));
+
   const parsed = createDoctorInputSchema.safeParse({
     slug,
     fullName: formData.get("fullName"),
@@ -69,6 +81,8 @@ export async function createDoctorAction(_prevState: ActionState, formData: Form
     primarySpecialtyId,
     specialtyIds,
     hospitalIds: hospitalIds.length > 0 ? hospitalIds : undefined,
+    chambers: chamberRows.chambers.length > 0 ? chamberRows.chambers : undefined,
+    conditionsTreated: conditionsTreated.length > 0 ? conditionsTreated : undefined,
   });
 
   if (!parsed.success) {
