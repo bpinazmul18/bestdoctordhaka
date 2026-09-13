@@ -2,7 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { getRequiredEnv } from "@/lib/utils/env";
-import { findAllLocationSlugs, findAllLocations, findLocationBySlug } from "./location.repository";
+import { createLocationRecord, findAllLocationSlugs, findAllLocations, findLocationBySlug } from "./location.repository";
 
 const adapter = new PrismaPg({ connectionString: getRequiredEnv("TEST_DATABASE_URL") });
 const prisma = new PrismaClient({ adapter });
@@ -66,6 +66,22 @@ describe("location.repository", () => {
       prisma.location.create({
         data: { slug: "dhanmondi", name: "Dhanmondi" } as never,
       }),
+    ).rejects.toThrow();
+  });
+
+  it("should create a location", async () => {
+    const result = await createLocationRecord({ slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" });
+
+    expect(result.slug).toBe("dhanmondi");
+    const stored = await prisma.location.findUnique({ where: { slug: "dhanmondi" } });
+    expect(stored?.city).toBe("Dhaka");
+  });
+
+  it("should reject creating a location with a duplicate slug", async () => {
+    await createLocationRecord({ slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" });
+
+    await expect(
+      createLocationRecord({ slug: "dhanmondi", name: "Duplicate", city: "Dhaka" }),
     ).rejects.toThrow();
   });
 });

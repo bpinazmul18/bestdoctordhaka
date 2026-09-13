@@ -1,5 +1,16 @@
 import { prisma } from "@/lib/db/prisma";
 import type { Specialty } from "@/generated/prisma/client";
+import type { CreateSpecialtyInput } from "./specialty.validation";
+
+export async function createSpecialtyRecord(input: CreateSpecialtyInput): Promise<Specialty> {
+  return prisma.specialty.create({
+    data: {
+      slug: input.slug,
+      name: input.name,
+      description: input.description,
+    },
+  });
+}
 
 export async function findAllSpecialties(): Promise<Specialty[]> {
   return prisma.specialty.findMany({ orderBy: { name: "asc" } });

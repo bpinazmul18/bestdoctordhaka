@@ -22,3 +22,12 @@ export function parseDiagnosticCenterListQuery(raw: unknown): DiagnosticCenterLi
 }
 
 export const diagnosticCenterSlugParamSchema = slugSchema;
+
+export const createDiagnosticCenterInputSchema = z.object({
+  slug: slugSchema,
+  name: z.string().trim().min(1).max(200),
+  locationId: z.string().trim().min(1),
+  testIds: z.array(z.string().trim().min(1)).optional(),
+});
+
+export type CreateDiagnosticCenterInput = z.infer<typeof createDiagnosticCenterInputSchema>;

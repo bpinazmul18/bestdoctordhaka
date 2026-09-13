@@ -13,3 +13,9 @@ export interface HospitalDTO {
 export interface HospitalListFilters {
   locationSlug?: string;
 }
+
+/** Internal option shape for admin selects — carries the id needed to form relations. */
+export interface HospitalOptionDTO {
+  id: string;
+  name: string;
+}

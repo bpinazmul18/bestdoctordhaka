@@ -1,9 +1,30 @@
 import { prisma } from "@/lib/db/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import type { DiagnosticCenter } from "@/generated/prisma/client";
 import { toSkipTake, type PaginationParams } from "@/lib/pagination/pagination";
+import type { CreateDiagnosticCenterInput } from "./diagnostic-center.validation";
 import type { DiagnosticCenterListFilters } from "./diagnostic-center.types";
 
 const diagnosticCenterListInclude = { location: true } satisfies Prisma.DiagnosticCenterInclude;
+
+export async function createDiagnosticCenterRecord(
+  input: CreateDiagnosticCenterInput,
+): Promise<DiagnosticCenter> {
+  return prisma.diagnosticCenter.create({
+    data: {
+      slug: input.slug,
+      name: input.name,
+      location: { connect: { id: input.locationId } },
+      tests: input.testIds
+        ? {
+            create: input.testIds.map((diagnosticTestId) => ({
+              diagnosticTest: { connect: { id: diagnosticTestId } },
+            })),
+          }
+        : undefined,
+    },
+  });
+}
 
 const diagnosticCenterProfileInclude = {
   location: true,

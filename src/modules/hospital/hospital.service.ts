@@ -1,8 +1,32 @@
+import type { Hospital } from "@/generated/prisma/client";
 import { buildPaginatedResult, type PaginatedResult } from "@/lib/pagination/pagination";
-import { countHospitals, findAllHospitalSlugs, findHospitalBySlug, findManyHospitals } from "./hospital.repository";
+import {
+  countHospitals,
+  createHospitalRecord,
+  findAllHospitals,
+  findAllHospitalSlugs,
+  findHospitalBySlug,
+  findManyHospitals,
+} from "./hospital.repository";
 import { toHospitalDTO } from "./hospital.mapper";
-import { hospitalSlugParamSchema, type HospitalListQuery } from "./hospital.validation";
-import type { HospitalDTO, HospitalListFilters } from "./hospital.types";
+import {
+  createHospitalInputSchema,
+  hospitalSlugParamSchema,
+  type CreateHospitalInput,
+  type HospitalListQuery,
+} from "./hospital.validation";
+import type { HospitalDTO, HospitalListFilters, HospitalOptionDTO } from "./hospital.types";
+
+export async function createHospital(input: CreateHospitalInput): Promise<Hospital> {
+  const validated = createHospitalInputSchema.parse(input);
+  return createHospitalRecord(validated);
+}
+
+/** For admin selects that need to relate a record to a Hospital by id. */
+export async function listHospitalOptions(): Promise<HospitalOptionDTO[]> {
+  const rows = await findAllHospitals();
+  return rows.map((row) => ({ id: row.id, name: row.name }));
+}
 
 function toFilters(query: HospitalListQuery): HospitalListFilters {
   return { locationSlug: query.location };

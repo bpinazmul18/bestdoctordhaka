@@ -1,8 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getLocationBySlug, listAllLocationSlugs, listLocations } from "./location.service";
-import { findAllLocationSlugs, findAllLocations, findLocationBySlug } from "./location.repository";
+import {
+  createLocation,
+  getLocationBySlug,
+  listAllLocationSlugs,
+  listLocationOptions,
+  listLocations,
+} from "./location.service";
+import {
+  createLocationRecord,
+  findAllLocationSlugs,
+  findAllLocations,
+  findLocationBySlug,
+} from "./location.repository";
 
 vi.mock("./location.repository", () => ({
+  createLocationRecord: vi.fn(),
   findAllLocations: vi.fn(),
   findLocationBySlug: vi.fn(),
   findAllLocationSlugs: vi.fn(),
@@ -74,5 +86,43 @@ describe("listAllLocationSlugs", () => {
     const result = await listAllLocationSlugs();
 
     expect(result).toEqual(["dhanmondi", "gulshan"]);
+  });
+});
+
+describe("listLocationOptions", () => {
+  it("should map repository rows to id/name/city option DTOs", async () => {
+    vi.mocked(findAllLocations).mockResolvedValue([
+      { id: "1", slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka", createdAt: new Date(), updatedAt: new Date() },
+    ]);
+
+    const result = await listLocationOptions();
+
+    expect(result).toEqual([{ id: "1", name: "Dhanmondi", city: "Dhaka" }]);
+  });
+});
+
+describe("createLocation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const validInput = { slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" };
+
+  it("should persist a valid location", async () => {
+    vi.mocked(createLocationRecord).mockResolvedValue({
+      id: "1",
+      ...validInput,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await createLocation(validInput);
+
+    expect(createLocationRecord).toHaveBeenCalledWith(validInput);
+  });
+
+  it("should reject a missing city without touching the repository", async () => {
+    await expect(createLocation({ slug: "dhanmondi", name: "Dhanmondi", city: "" })).rejects.toThrow();
+    expect(createLocationRecord).not.toHaveBeenCalled();
   });
 });

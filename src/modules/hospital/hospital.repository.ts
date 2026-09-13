@@ -1,11 +1,23 @@
 import { prisma } from "@/lib/db/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import type { Hospital } from "@/generated/prisma/client";
 import { toSkipTake, type PaginationParams } from "@/lib/pagination/pagination";
+import type { CreateHospitalInput } from "./hospital.validation";
 import type { HospitalListFilters } from "./hospital.types";
 
 const hospitalWithLocationInclude = { location: true } satisfies Prisma.HospitalInclude;
 
 export type HospitalRecord = Prisma.HospitalGetPayload<{ include: typeof hospitalWithLocationInclude }>;
+
+export async function createHospitalRecord(input: CreateHospitalInput): Promise<Hospital> {
+  return prisma.hospital.create({
+    data: {
+      slug: input.slug,
+      name: input.name,
+      location: { connect: { id: input.locationId } },
+    },
+  });
+}
 
 function buildWhere(filters: HospitalListFilters): Prisma.HospitalWhereInput {
   const where: Prisma.HospitalWhereInput = {};
@@ -38,6 +50,10 @@ export async function countHospitals(filters: HospitalListFilters): Promise<numb
 
 export async function findHospitalBySlug(slug: string): Promise<HospitalRecord | null> {
   return prisma.hospital.findUnique({ where: { slug }, include: hospitalWithLocationInclude });
+}
+
+export async function findAllHospitals(): Promise<Hospital[]> {
+  return prisma.hospital.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function findAllHospitalSlugs(): Promise<string[]> {

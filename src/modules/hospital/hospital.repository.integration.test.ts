@@ -2,7 +2,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { getRequiredEnv } from "@/lib/utils/env";
-import { countHospitals, findAllHospitalSlugs, findHospitalBySlug, findManyHospitals } from "./hospital.repository";
+import {
+  countHospitals,
+  createHospitalRecord,
+  findAllHospitalSlugs,
+  findHospitalBySlug,
+  findManyHospitals,
+} from "./hospital.repository";
 
 const adapter = new PrismaPg({ connectionString: getRequiredEnv("TEST_DATABASE_URL") });
 const prisma = new PrismaClient({ adapter });
@@ -109,5 +115,34 @@ describe("hospital.repository", () => {
     const { dhanmondi } = await seedBasicFixture();
 
     await expect(prisma.location.delete({ where: { id: dhanmondi.id } })).rejects.toThrow();
+  });
+
+  it("should create a hospital connected to an existing location", async () => {
+    const dhanmondi = await prisma.location.create({ data: { slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" } });
+
+    const result = await createHospitalRecord({
+      slug: "square-hospital-test",
+      name: "Square Hospital (Test)",
+      locationId: dhanmondi.id,
+    });
+
+    expect(result.slug).toBe("square-hospital-test");
+    const stored = await prisma.hospital.findUnique({ where: { slug: "square-hospital-test" } });
+    expect(stored?.locationId).toBe(dhanmondi.id);
+  });
+
+  it("should reject creating a hospital for a nonexistent location", async () => {
+    await expect(
+      createHospitalRecord({ slug: "square-hospital-test", name: "Square Hospital (Test)", locationId: "does-not-exist" }),
+    ).rejects.toThrow();
+  });
+
+  it("should reject creating a hospital with a duplicate slug", async () => {
+    const dhanmondi = await prisma.location.create({ data: { slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" } });
+    await createHospitalRecord({ slug: "square-hospital-test", name: "Square Hospital (Test)", locationId: dhanmondi.id });
+
+    await expect(
+      createHospitalRecord({ slug: "square-hospital-test", name: "Duplicate", locationId: dhanmondi.id }),
+    ).rejects.toThrow();
   });
 });

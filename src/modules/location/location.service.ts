@@ -1,11 +1,29 @@
+import type { Location } from "@/generated/prisma/client";
 import { slugSchema } from "@/lib/validation/common";
-import { findAllLocations, findAllLocationSlugs, findLocationBySlug } from "./location.repository";
-import { toLocationDTO } from "./location.mapper";
-import type { LocationDTO } from "./location.types";
+import {
+  createLocationRecord,
+  findAllLocations,
+  findAllLocationSlugs,
+  findLocationBySlug,
+} from "./location.repository";
+import { toLocationDTO, toLocationOptionDTO } from "./location.mapper";
+import { createLocationInputSchema, type CreateLocationInput } from "./location.validation";
+import type { LocationDTO, LocationOptionDTO } from "./location.types";
+
+export async function createLocation(input: CreateLocationInput): Promise<Location> {
+  const validated = createLocationInputSchema.parse(input);
+  return createLocationRecord(validated);
+}
 
 export async function listLocations(): Promise<LocationDTO[]> {
   const rows = await findAllLocations();
   return rows.map(toLocationDTO);
+}
+
+/** For admin selects that need to relate a record to a Location by id. */
+export async function listLocationOptions(): Promise<LocationOptionDTO[]> {
+  const rows = await findAllLocations();
+  return rows.map(toLocationOptionDTO);
 }
 
 export async function getLocationBySlug(rawSlug: string): Promise<LocationDTO | null> {

@@ -1,9 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getHospitalBySlug, listAllHospitalSlugs, listHospitals } from "./hospital.service";
-import { countHospitals, findAllHospitalSlugs, findHospitalBySlug, findManyHospitals } from "./hospital.repository";
+import {
+  createHospital,
+  getHospitalBySlug,
+  listAllHospitalSlugs,
+  listHospitalOptions,
+  listHospitals,
+} from "./hospital.service";
+import {
+  countHospitals,
+  createHospitalRecord,
+  findAllHospitalSlugs,
+  findAllHospitals,
+  findHospitalBySlug,
+  findManyHospitals,
+} from "./hospital.repository";
 
 vi.mock("./hospital.repository", () => ({
+  createHospitalRecord: vi.fn(),
   findManyHospitals: vi.fn(),
+  findAllHospitals: vi.fn(),
   countHospitals: vi.fn(),
   findHospitalBySlug: vi.fn(),
   findAllHospitalSlugs: vi.fn(),
@@ -73,5 +88,52 @@ describe("listAllHospitalSlugs", () => {
     const result = await listAllHospitalSlugs();
 
     expect(result).toEqual(["square-hospital-test", "apollo-hospital-test"]);
+  });
+});
+
+describe("listHospitalOptions", () => {
+  it("should map repository rows to id/name option DTOs", async () => {
+    vi.mocked(findAllHospitals).mockResolvedValue([
+      {
+        id: "1",
+        slug: "square-hospital-test",
+        name: "Square Hospital (Test)",
+        locationId: "loc-1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const result = await listHospitalOptions();
+
+    expect(result).toEqual([{ id: "1", name: "Square Hospital (Test)" }]);
+  });
+});
+
+describe("createHospital", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const validInput = { slug: "square-hospital-test", name: "Square Hospital (Test)", locationId: "loc-1" };
+
+  it("should persist a valid hospital", async () => {
+    vi.mocked(createHospitalRecord).mockResolvedValue({
+      id: "1",
+      ...validInput,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await createHospital(validInput);
+
+    expect(createHospitalRecord).toHaveBeenCalledWith(validInput);
+  });
+
+  it("should reject a missing locationId without touching the repository", async () => {
+    await expect(
+      createHospital({ slug: "square-hospital-test", name: "Square Hospital (Test)", locationId: "" }),
+    ).rejects.toThrow();
+    expect(createHospitalRecord).not.toHaveBeenCalled();
   });
 });

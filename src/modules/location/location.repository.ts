@@ -1,5 +1,16 @@
 import { prisma } from "@/lib/db/prisma";
 import type { Location } from "@/generated/prisma/client";
+import type { CreateLocationInput } from "./location.validation";
+
+export async function createLocationRecord(input: CreateLocationInput): Promise<Location> {
+  return prisma.location.create({
+    data: {
+      slug: input.slug,
+      name: input.name,
+      city: input.city,
+    },
+  });
+}
 
 export async function findAllLocations(): Promise<Location[]> {
   return prisma.location.findMany({ orderBy: { name: "asc" } });

@@ -21,3 +21,11 @@ export function parseHospitalListQuery(raw: unknown): HospitalListQuery {
 }
 
 export const hospitalSlugParamSchema = slugSchema;
+
+export const createHospitalInputSchema = z.object({
+  slug: slugSchema,
+  name: z.string().trim().min(1).max(200),
+  locationId: z.string().trim().min(1),
+});
+
+export type CreateHospitalInput = z.infer<typeof createHospitalInputSchema>;

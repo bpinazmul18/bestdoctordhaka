@@ -1,8 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getSpecialtyBySlug, listAllSpecialtySlugs, listSpecialties } from "./specialty.service";
-import { findAllSpecialties, findAllSpecialtySlugs, findSpecialtyBySlug } from "./specialty.repository";
+import {
+  createSpecialty,
+  getSpecialtyBySlug,
+  listAllSpecialtySlugs,
+  listSpecialties,
+  listSpecialtyOptions,
+} from "./specialty.service";
+import {
+  createSpecialtyRecord,
+  findAllSpecialties,
+  findAllSpecialtySlugs,
+  findSpecialtyBySlug,
+} from "./specialty.repository";
 
 vi.mock("./specialty.repository", () => ({
+  createSpecialtyRecord: vi.fn(),
   findAllSpecialties: vi.fn(),
   findSpecialtyBySlug: vi.fn(),
   findAllSpecialtySlugs: vi.fn(),
@@ -74,5 +86,44 @@ describe("listAllSpecialtySlugs", () => {
     const result = await listAllSpecialtySlugs();
 
     expect(result).toEqual(["cardiology", "dermatology"]);
+  });
+});
+
+describe("listSpecialtyOptions", () => {
+  it("should map repository rows to id/name option DTOs", async () => {
+    vi.mocked(findAllSpecialties).mockResolvedValue([
+      { id: "1", slug: "cardiology", name: "Cardiology", description: null, createdAt: new Date(), updatedAt: new Date() },
+    ]);
+
+    const result = await listSpecialtyOptions();
+
+    expect(result).toEqual([{ id: "1", name: "Cardiology" }]);
+  });
+});
+
+describe("createSpecialty", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const validInput = { slug: "cardiology", name: "Cardiology" };
+
+  it("should persist a valid specialty", async () => {
+    vi.mocked(createSpecialtyRecord).mockResolvedValue({
+      id: "1",
+      ...validInput,
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await createSpecialty(validInput);
+
+    expect(createSpecialtyRecord).toHaveBeenCalledWith(validInput);
+  });
+
+  it("should reject an invalid slug without touching the repository", async () => {
+    await expect(createSpecialty({ slug: "Not A Slug!", name: "Cardiology" })).rejects.toThrow();
+    expect(createSpecialtyRecord).not.toHaveBeenCalled();
   });
 });

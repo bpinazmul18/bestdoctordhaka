@@ -4,6 +4,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { getRequiredEnv } from "@/lib/utils/env";
 import {
   countDiagnosticCenters,
+  createDiagnosticCenterRecord,
   findAllDiagnosticCenterSlugs,
   findDiagnosticCenterBySlug,
   findManyDiagnosticCenters,
@@ -150,5 +151,54 @@ describe("diagnostic-center.repository", () => {
     const { xray } = await seedBasicFixture();
 
     await expect(prisma.diagnosticTest.delete({ where: { id: xray.id } })).rejects.toThrow();
+  });
+
+  it("should create a diagnostic center with connected tests", async () => {
+    const dhanmondi = await prisma.location.create({ data: { slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" } });
+    const xray = await prisma.diagnosticTest.create({ data: { slug: "x-ray", name: "X-Ray" } });
+
+    const result = await createDiagnosticCenterRecord({
+      slug: "dhanmondi-diagnostic-test",
+      name: "Dhanmondi Diagnostic (Test)",
+      locationId: dhanmondi.id,
+      testIds: [xray.id],
+    });
+
+    expect(result.slug).toBe("dhanmondi-diagnostic-test");
+    const stored = await prisma.diagnosticCenter.findUnique({
+      where: { slug: "dhanmondi-diagnostic-test" },
+      include: { tests: true },
+    });
+    expect(stored?.tests).toHaveLength(1);
+    expect(stored?.tests[0].diagnosticTestId).toBe(xray.id);
+  });
+
+  it("should create a diagnostic center with no tests when none are given", async () => {
+    const dhanmondi = await prisma.location.create({ data: { slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" } });
+
+    const result = await createDiagnosticCenterRecord({
+      slug: "dhanmondi-diagnostic-test",
+      name: "Dhanmondi Diagnostic (Test)",
+      locationId: dhanmondi.id,
+    });
+
+    expect(result.slug).toBe("dhanmondi-diagnostic-test");
+  });
+
+  it("should reject creating a diagnostic center with a duplicate slug", async () => {
+    const dhanmondi = await prisma.location.create({ data: { slug: "dhanmondi", name: "Dhanmondi", city: "Dhaka" } });
+    await createDiagnosticCenterRecord({
+      slug: "dhanmondi-diagnostic-test",
+      name: "Dhanmondi Diagnostic (Test)",
+      locationId: dhanmondi.id,
+    });
+
+    await expect(
+      createDiagnosticCenterRecord({
+        slug: "dhanmondi-diagnostic-test",
+        name: "Duplicate",
+        locationId: dhanmondi.id,
+      }),
+    ).rejects.toThrow();
   });
 });

@@ -16,6 +16,7 @@
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:bulk": "tsx prisma/seed-bulk.ts",
+    "db:seed:admin": "tsx prisma/seed-admin.ts",
     "postinstall": "prisma generate",
     "prepare": "husky"
   },
@@ -23,6 +24,7 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "ioredis": "^6.0.0",
+    "jose": "^6.2.12",
     "next": "16.3.5",
     "pg": "^8.23.0",
     "react": "19.2.8",

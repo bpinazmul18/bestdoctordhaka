@@ -1,17 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createDiagnosticCenter,
   getDiagnosticCenterBySlug,
   listAllDiagnosticCenterSlugs,
   listDiagnosticCenters,
 } from "./diagnostic-center.service";
 import {
   countDiagnosticCenters,
+  createDiagnosticCenterRecord,
   findAllDiagnosticCenterSlugs,
   findDiagnosticCenterBySlug,
   findManyDiagnosticCenters,
 } from "./diagnostic-center.repository";
 
 vi.mock("./diagnostic-center.repository", () => ({
+  createDiagnosticCenterRecord: vi.fn(),
   findManyDiagnosticCenters: vi.fn(),
   countDiagnosticCenters: vi.fn(),
   findDiagnosticCenterBySlug: vi.fn(),
@@ -89,5 +92,33 @@ describe("listAllDiagnosticCenterSlugs", () => {
     const result = await listAllDiagnosticCenterSlugs();
 
     expect(result).toEqual(["test-diagnostic-center"]);
+  });
+});
+
+describe("createDiagnosticCenter", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const validInput = { slug: "test-diagnostic-center", name: "Test Diagnostic Center", locationId: "loc-1" };
+
+  it("should persist a valid diagnostic center", async () => {
+    vi.mocked(createDiagnosticCenterRecord).mockResolvedValue({
+      id: "1",
+      ...validInput,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await createDiagnosticCenter(validInput);
+
+    expect(createDiagnosticCenterRecord).toHaveBeenCalledWith(validInput);
+  });
+
+  it("should reject an invalid slug without touching the repository", async () => {
+    await expect(
+      createDiagnosticCenter({ slug: "Not A Slug!", name: "Test", locationId: "loc-1" }),
+    ).rejects.toThrow();
+    expect(createDiagnosticCenterRecord).not.toHaveBeenCalled();
   });
 });

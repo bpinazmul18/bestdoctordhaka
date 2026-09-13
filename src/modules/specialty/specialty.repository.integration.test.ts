@@ -2,7 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { getRequiredEnv } from "@/lib/utils/env";
-import { findAllSpecialties, findAllSpecialtySlugs, findSpecialtyBySlug } from "./specialty.repository";
+import { createSpecialtyRecord, findAllSpecialties, findAllSpecialtySlugs, findSpecialtyBySlug } from "./specialty.repository";
 
 const adapter = new PrismaPg({ connectionString: getRequiredEnv("TEST_DATABASE_URL") });
 const prisma = new PrismaClient({ adapter });
@@ -64,5 +64,23 @@ describe("specialty.repository", () => {
     await expect(
       prisma.specialty.create({ data: { slug: "cardiology", name: "Cardiology Duplicate" } }),
     ).rejects.toThrow();
+  });
+
+  it("should create a specialty", async () => {
+    const result = await createSpecialtyRecord({
+      slug: "cardiology",
+      name: "Cardiology",
+      description: "Heart care",
+    });
+
+    expect(result.slug).toBe("cardiology");
+    const stored = await prisma.specialty.findUnique({ where: { slug: "cardiology" } });
+    expect(stored?.name).toBe("Cardiology");
+  });
+
+  it("should reject creating a specialty with a duplicate slug", async () => {
+    await createSpecialtyRecord({ slug: "cardiology", name: "Cardiology" });
+
+    await expect(createSpecialtyRecord({ slug: "cardiology", name: "Duplicate" })).rejects.toThrow();
   });
 });
