@@ -11,3 +11,120 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum DoctorStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Specialty {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  doctors        DoctorSpecialty[]
+  primaryDoctors Doctor[]          @relation("PrimarySpecialty")
+
+  @@index([slug])
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  city      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chambers  Chamber[]
+  hospitals Hospital[]
+
+  @@index([slug])
+}
+
+model Hospital {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  locationId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  location Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  doctors  DoctorHospital[]
+  chambers Chamber[]
+
+  @@index([locationId])
+}
+
+model Doctor {
+  id                 String       @id @default(cuid())
+  slug               String       @unique
+  fullName           String
+  degrees            String?
+  designation        String?
+  shortBio           String?
+  profileImageUrl    String?
+  yearsOfExperience  Int?
+  primarySpecialtyId String
+  status             DoctorStatus @default(DRAFT)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  primarySpecialty Specialty         @relation("PrimarySpecialty", fields: [primarySpecialtyId], references: [id], onDelete: Restrict)
+  specialties      DoctorSpecialty[]
+  hospitals        DoctorHospital[]
+  chambers         Chamber[]
+
+  @@index([status])
+  @@index([primarySpecialtyId])
+  @@index([status, primarySpecialtyId])
+}
+
+model DoctorSpecialty {
+  doctorId    String
+  specialtyId String
+
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
+
+  @@id([doctorId, specialtyId])
+  @@index([specialtyId])
+}
+
+model DoctorHospital {
+  doctorId   String
+  hospitalId String
+
+  doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+
+  @@id([doctorId, hospitalId])
+  @@index([hospitalId])
+}
+
+model Chamber {
+  id                String   @id @default(cuid())
+  doctorId          String
+  hospitalId        String?
+  locationId        String
+  name              String?
+  addressLine       String
+  contactPhone      String?
+  whatsappNumber    String?
+  visitingHoursNote String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  doctor   Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital Hospital? @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  location Location  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@index([doctorId])
+  @@index([locationId])
+  @@index([hospitalId])
+}

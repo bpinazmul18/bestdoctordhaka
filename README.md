@@ -48,23 +48,31 @@ This starts Redis on `localhost:6379`.
 cp .env.example .env.local
 ```
 
-The defaults in `.env.example` match the role/databases created above. `.env.test` is committed (non-secret, deterministic local values) and holds `TEST_DATABASE_URL`/`TEST_REDIS_URL` for integration tests — Next.js does not load `.env.local` when `NODE_ENV=test`.
+The defaults in `.env.example` match the role/databases created above. `.env.test` is committed (non-secret, deterministic local values) and holds `TEST_DATABASE_URL`/`TEST_REDIS_URL`, plus a `DATABASE_URL` pointed at the test database, for integration tests — Next.js does not load `.env.local` when `NODE_ENV=test`.
 
-### 5. Run the initial migration
+### 5. Run migrations
 
 ```bash
 npx prisma migrate dev
 ```
 
-Phase 0 ships no models yet, so this currently just proves connectivity/tooling; the first real migration will land in Phase 1.
+Applies the Doctor Directory schema (Doctor, Specialty, Location, Hospital, Chamber) to your dev database. Run the same migration against `bestdoctordhaka_test` (e.g. `DATABASE_URL=$TEST_DATABASE_URL npx prisma migrate deploy`) before running integration tests.
 
-### 6. Start the dev server
+### 6. Seed local data
+
+```bash
+npm run db:seed
+```
+
+Loads a handful of deterministic, clearly-fake doctors/specialties/locations into your dev database (see `prisma/seed.ts`). Safe to re-run.
+
+### 7. Start the dev server
 
 ```bash
 npm run dev
 ```
 
-Visit http://localhost:3000. Check http://localhost:3000/api/health to confirm the app can reach both PostgreSQL and Redis.
+Visit http://localhost:3000. Check http://localhost:3000/api/health to confirm the app can reach both PostgreSQL and Redis, or browse http://localhost:3000/doctors to see the seeded directory.
 
 ## Testing
 
@@ -88,15 +96,31 @@ A pre-commit hook (Husky + lint-staged) runs ESLint on staged files automaticall
 
 ```text
 src/
-├── app/            # Next.js App Router routes
-│   └── api/health/ # DB + Redis connectivity check
+├── app/                 # Next.js App Router routes
+│   ├── api/health/      # DB + Redis connectivity check
+│   ├── doctors/         # Doctor listing + profile pages
+│   ├── specialties/     # Specialty index + landing pages
+│   ├── locations/       # Location index + landing pages
+│   ├── sitemap.ts
+│   └── robots.ts
+├── modules/
+│   ├── doctor/          # types, validation, repository, service, mapper
+│   ├── specialty/
+│   └── location/
+├── components/
+│   ├── doctor/          # DoctorCard
+│   └── shared/          # Breadcrumbs, Pagination
 ├── lib/
-│   ├── db/         # Prisma client singleton
-│   ├── cache/      # Redis client singleton
-│   └── utils/      # Framework-agnostic helpers
-└── generated/      # Prisma-generated client (gitignored, regenerate with `npm run prisma:generate`)
-prisma/             # Prisma schema and migrations
-tests/e2e/          # Playwright specs
+│   ├── db/              # Prisma client singleton
+│   ├── cache/           # Redis client singleton
+│   ├── validation/      # Shared zod schemas (slug, pagination)
+│   ├── pagination/       # Offset pagination helpers
+│   ├── slug/            # Slug generation
+│   ├── seo/             # Site URL constant
+│   └── utils/           # Framework-agnostic helpers
+└── generated/           # Prisma-generated client (gitignored, regenerate with `npm run prisma:generate`)
+prisma/                  # Prisma schema, migrations, seed.ts
+tests/e2e/               # Playwright specs
 ```
 
-Business modules (doctor, hospital, specialty, etc.) will live under `src/modules/` starting in Phase 1, per `docs/ARCHITECTURE.md`.
+There is no admin UI or authenticated mutation path yet — `Doctor.createDoctor` (in `src/modules/doctor/doctor.service.ts`) is invoked only from `prisma/seed.ts` and other local scripts, never over HTTP. The Hospital module (public pages, services) lands in Phase 2; Phase 1 only stores a minimal Hospital record for doctor affiliations.
